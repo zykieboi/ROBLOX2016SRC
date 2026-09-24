@@ -1,0 +1,41 @@
+name: Build Roblox 2016
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # CRITICAL: This must be a Windows runner for .sln files
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Setup MSBuild (comes with the Windows runner)
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # 2. Install the old VS2015 build tools (needed for v140_xp toolset)
+      - name: Install VS2015 Build Tools
+        run: choco install visualstudio2015buildtools -y
+
+      # 3. Build Boost (as per the README)
+      - name: Build Boost
+        working-directory: Library/boost
+        run: |
+          .\bootstrap.bat
+          .\build_boost.bat
+
+      # 4. Build the main solution
+      - name: Build Roblox.sln
+        run: msbuild Roblox.sln /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v140_xp /m
+
+      # 5. Save the built files
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: roblox-build
+          path: '**/*.exe'
